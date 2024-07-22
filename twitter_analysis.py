@@ -1,39 +1,59 @@
 import string
 from collections import Counter
-
+import tweepy
 import matplotlib.pyplot as plt
 
+# Replace with your actual Bearer Token
+bearer_token = 'AAAAAAAAAAAAAAAAAAAAALbRuwEAAAAAAWq%2FBSbVpPA2GZtt9d3l0kzDxpA%3DbnJlw6ta4SUqkeXTyXxLyfrCEJr2WiNBukNuugUudxbWk76uVo'
 
-def get_tweets():
-    import GetOldTweets3 as got
-    tweetCriteria = got.manager.TweetCriteria().setQuerySearch('CoronaOutbreak') \
-        .setSince("2020-01-01") \
-        .setUntil("2020-04-01") \
-        .setMaxTweets(1000)
-    # Creation of list that contains all tweets
-    tweets = got.manager.TweetManager.getTweets(tweetCriteria)
-    # Creating list of chosen tweet data
-    text_tweets = [[tweet.text] for tweet in tweets]
-    return text_tweets
+# Set up the Twitter API client
+client = tweepy.Client(bearer_token=bearer_token)
 
 
-# reading text file
+def get_tweets(query, start_date, end_date, max_results):
+    try:
+        response = client.search_recent_tweets(query=query,
+                                               start_time=start_date,
+                                               end_time=end_date,
+                                               max_results=max_results,
+                                               tweet_fields=['text'])
+
+        # Print the raw response for debugging
+        print("API Response:", response.json())  # Use response.json() to view the actual response content
+
+        if response.data:
+            tweets = response.data
+            text_tweets = [[tweet.text] for tweet in tweets]
+            return text_tweets
+        else:
+            print("No tweets found.")
+            return []
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
+
+
+# Get tweets
+text_tweets = get_tweets('Coronavirus', '2020-01-01T00:00:00Z', '2021-04-01T00:00:00Z', 1000)
+
+# Reading and processing tweets
 text = ""
-text_tweets = get_tweets()
 length = len(text_tweets)
 
-for i in range(0, length):
+for i in range(length):
     text = text_tweets[i][0] + " " + text
 
-# converting to lowercase
+# Converting to lowercase
 lower_case = text.lower()
 
 # Removing punctuations
 cleaned_text = lower_case.translate(str.maketrans('', '', string.punctuation))
 
-# splitting text into words
+# Splitting text into words
 tokenized_words = cleaned_text.split()
 
+# Define stop words
 stop_words = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself",
               "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself",
               "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these",
@@ -45,10 +65,13 @@ stop_words = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you"
               "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than",
               "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"]
 
-# Removing stop words from the tokenized words list
+# Removing stop words
 final_words = [word for word in tokenized_words if word not in stop_words]
 
-# Get emotions text
+# Print final words for debugging
+print("Final Words:", final_words)
+
+# Get emotions from file
 emotion_list = []
 with open('emotions.txt', 'r') as file:
     for line in file:
@@ -57,6 +80,10 @@ with open('emotions.txt', 'r') as file:
         if word in final_words:
             emotion_list.append(emotion)
 
+# Print emotion list for debugging
+print("Emotion List:", emotion_list)
+
+# Count emotions and plot results
 w = Counter(emotion_list)
 print(w)
 
